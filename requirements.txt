@@ -1,0 +1,7 @@
+google-cloud-storage
+tqdm
+pandas
+Pillow
+azure
+wget
+boto3
