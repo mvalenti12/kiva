@@ -10,24 +10,25 @@ import tqdm
 import logging
 import boto3
 import json
-
-
-###########################################################
-################  Logger Initiation  ######################
-###########################################################
-
-logging.basicConfig(filename=f'tmp/log_aws_{time.strftime("%Y%m%d-%H%M%S")}.txt',
-                    level=logging.INFO, 
-                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
-logger=logging.getLogger(__name__)
-
+from collections import OrderedDict
 
 ###########################################################
 ################  Path description  #######################
 ###########################################################
 
-IMG_DIR = 'img'
+date_subset = '2020-11-16'
+IMG_DIR = 'img/' + date_subset
 OUTPUT_DIR = 'data/processed/'
+
+###########################################################
+################  Logger Initiation  ######################
+###########################################################
+
+logging.basicConfig(filename=f'tmp/log_aws_{date_subset}_{time.strftime("%Y%m%d-%H%M%S")}.txt',
+                    level=logging.INFO, 
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger=logging.getLogger(__name__)
+
 
 ###########################################################
 ################  Authentication    #######################
@@ -91,33 +92,46 @@ def get_emotions_aws(path):
 
     response = client.detect_faces(Image={'Bytes': content}, Attributes=['ALL'])
     
-    emotions_keys = [list(item.values())[0] for item in response['FaceDetails'][0]['Emotions']]
-    emotions_values = [list(item.values())[1] for item in response['FaceDetails'][0]['Emotions']]
-    
-    res = dict(zip(emotions_keys, emotions_values))
-    res['overall_confidence'] = response['FaceDetails'][0]['Confidence']
-    res['age_range_low'] = response['FaceDetails'][0]['AgeRange']['Low']
-    res['age_range_high'] = response['FaceDetails'][0]['AgeRange']['Low']
-    res.update(response['FaceDetails'][0]['BoundingBox'])
-        
-    return res
+    # Retrieves the loan_id
+    res = {'loan_id' : os.path.split(file_name)[1].replace('.jpg','')}
+    # Retrieves the emotions and updates the dictionary
+    try: 
+      emotions_keys = [list(item.values())[0] for item in response['FaceDetails'][0]['Emotions']]
+      emotions_values = [list(item.values())[1] for item in response['FaceDetails'][0]['Emotions']]
+      emotions_dict = OrderedDict(sorted(dict(zip(emotions_keys, emotions_values)).items()))
+      res.update(emotions_dict)
+      # Retrieves overall confidence
+      res['overall_confidence'] = response['FaceDetails'][0]['Confidence']
+      # Retrieves age range
+      res['age_range_low'] = response['FaceDetails'][0]['AgeRange']['Low']
+      res['age_range_high'] = response['FaceDetails'][0]['AgeRange']['Low']
+      # Retrieves Bounding Box
+      res.update(response['FaceDetails'][0]['BoundingBox'])
+      return res
+    except:
+      logger.exception('No face detected from image {}'.format(path))
+    return None
 
     
 # Creates list for storing results
 res = []
-for file_name in tqdm.tqdm(file_names[0:20]):
+for file_name in tqdm.tqdm(file_names[0:200]):
   loan_id = os.path.split(file_name)[1].replace('.jpg','')
   
   if (str(loan_id) in processed_ids):
     print('Loan ID {} already processed'.format(str(loan_id)))
   else: 
     out = get_emotions_aws(file_name)
-    res.append(out)
+    print('Loan ID {} processed correctly'.format(str(loan_id)))
+    if out is not None:
+        res.append(out)
+    else:
+        print('Loan ID {} had no results'.format(str(loan_id)))
 
 # Concatenate to DataFrame and write to file  
 if len(res)>0:
   df = pd.DataFrame(res)
-  filename = OUTPUT_DIR  + time.strftime("%Y%m%d-%H%M%S") + '_aws.csv'
+  filename = OUTPUT_DIR  + date_subset + '_' + time.strftime("%Y%m%d-%H%M%S") + '_aws.csv'
   df.to_csv(filename)
 
 

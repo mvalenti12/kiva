@@ -22,20 +22,21 @@ import json
 import logging
 
 ###########################################################
-################  Logger Initiation  ######################
-###########################################################
-
-logging.basicConfig(filename=f'tmp/log_msft_{time.strftime("%Y%m%d-%H%M%S")}.txt',
-                    level=logging.INFO, 
-                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
-logger=logging.getLogger(__name__)
-
-###########################################################
 ################  Path description  #######################
 ###########################################################
 
-IMG_DIR = 'img'
+date_subset = '2020-11-16'
+IMG_DIR = 'img/' + date_subset
 OUTPUT_DIR = 'data/processed/'
+
+###########################################################
+################  Logger Initiation  ######################
+###########################################################
+
+logging.basicConfig(filename=f'tmp/log_msft_{date_subset}_{time.strftime("%Y%m%d-%H%M%S")}.txt',
+                    level=logging.INFO, 
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger=logging.getLogger(__name__)
 
 ###########################################################
 ################  Authentication    #######################
@@ -68,6 +69,7 @@ files = os.listdir(OUTPUT_DIR)
 files = list(filter(lambda f: f.endswith('_msft.csv'), files))
 
 # Iterates over files on already outputted results, adding the loan_ids in the files in the processed_ids set
+date_subset = '2020-11-16'
 processed_ids = set()
 for file in files:
   df_aux = pd.read_csv(f'{OUTPUT_DIR}{file}')
@@ -120,21 +122,24 @@ def get_emotions_msft(path):
 
 # Creates list for storing results
 res = []
-for file_name in tqdm.tqdm(file_names[0:70]):
+for file_name in tqdm.tqdm(file_names[0:200]):
   
   # Extracts loan_id from image name
   loan_id = os.path.split(file_name)[1].replace('.jpg','')
   
   if (str(loan_id) in processed_ids):
-    logger.info('Loan ID {} already processed'.format(str(loan_id)))
+    print('Loan ID {} already processed'.format(str(loan_id)))
   else: 
-      out = get_emotions_msft(file_name)
-      if out is not None:
+    out = get_emotions_msft(file_name)
+    print('Loan ID {} processed correctly'.format(str(loan_id)))
+    if out is not None:
         res.append(out)
+    else:
+        print('Loan ID {} had no results'.format(str(loan_id)))
 
 # Concatenate to DataFrame and write to file  
 if len(res)>0:
   df = pd.DataFrame(res)
-  filename = OUTPUT_DIR  + time.strftime("%Y%m%d-%H%M%S") + '_msft.csv'
+  filename = OUTPUT_DIR  + date_subset + '_' + time.strftime("%Y%m%d-%H%M%S") + '_msft.csv'
   df.to_csv(filename)
 
