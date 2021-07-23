@@ -10,21 +10,32 @@ import tqdm
 import logging
 import boto3
 import json
+import sys
 from collections import OrderedDict
 
 ###########################################################
 ################  Path description  #######################
 ###########################################################
 
-date_subset = '2020-11-16'
-IMG_DIR = 'img/' + date_subset
+# Opening JSON file
+f = open('Config/experiments.json')
+  
+# returns JSON object as  a dictionary
+json_experiment = json.load(f)
+
+experiment_id = sys.argv[1]
+
+if experiment_id not in json_experiment:
+  raise Exception('experiment_id should be in experiments.json.')
+
+IMG_DIR = 'img/' + experiment_id
 OUTPUT_DIR = 'data/processed/'
 
 ###########################################################
 ################  Logger Initiation  ######################
 ###########################################################
 
-logging.basicConfig(filename=f'tmp/log_aws_{date_subset}_{time.strftime("%Y%m%d-%H%M%S")}.txt',
+logging.basicConfig(filename=f'tmp/log_aws_{experiment_id}_{time.strftime("%Y%m%d-%H%M%S")}.txt',
                     level=logging.INFO, 
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger=logging.getLogger(__name__)
@@ -115,7 +126,7 @@ def get_emotions_aws(path):
     
 # Creates list for storing results
 res = []
-for file_name in tqdm.tqdm(file_names[0:200]):
+for file_name in tqdm.tqdm(file_names):
   loan_id = os.path.split(file_name)[1].replace('.jpg','')
   
   if (str(loan_id) in processed_ids):
@@ -131,7 +142,7 @@ for file_name in tqdm.tqdm(file_names[0:200]):
 # Concatenate to DataFrame and write to file  
 if len(res)>0:
   df = pd.DataFrame(res)
-  filename = OUTPUT_DIR  + date_subset + '_' + time.strftime("%Y%m%d-%H%M%S") + '_aws.csv'
+  filename = OUTPUT_DIR  + experiment_id + '_' + time.strftime("%Y%m%d-%H%M%S") + '_aws.csv'
   df.to_csv(filename)
 
 

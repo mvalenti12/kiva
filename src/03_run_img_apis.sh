@@ -1,1 +1,1 @@
-python src/0301_img_azure.py && python src/0302_img_google.py && python src/0303_img_aws.py
+python src/0301_img_azure.py "$1" && python src/0302_img_google.py "$1" && python src/0303_img_aws.py "$1"

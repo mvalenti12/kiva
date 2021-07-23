@@ -1,0 +1,12 @@
+{
+  "Philippines_Sep19": [{
+      "date_start": "2019-09-01",
+      "date_end": "2019-09-30",
+      "country": "Philippines"
+    }],
+  "Peru_Jan19" : [{
+      "date_start": "2019-09-19",
+      "date_end": "2019-09-20",
+      "country": "Philippines"
+    }]
+}
