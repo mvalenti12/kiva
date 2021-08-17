@@ -34,6 +34,10 @@ loans$time_to_fund <- as.numeric(as.POSIXct(loans$raised_time)-as.POSIXct(loans$
 
 args = commandArgs(trailingOnly=TRUE)
 
+
+
+loans$country_name[(to_date(loans$posted_time) >= '2019-09-01') & (to_date(loans$posted_time) <= '2019-10-01')] %>% table() %>% sort(decreasing = TRUE)
+
 # test if there is at least one argument: if not, return an error
 if (length(args)==0) {
   stop("At least one argument must be supplied (input file).n", call.=FALSE)
@@ -55,20 +59,22 @@ df <- loans %>%
          ) %>%         
   # Posted Date is after 2016-03-01
   filter(to_date(posted_time) >= params$date_start,
-         to_date(posted_time) <= params$date_end) %>%
+         to_date(posted_time) <= params$date_end,
+         partner_id == params$partner_id) %>%
   filter(borrower_genders=="female",  
          # There is only ONE borrower IN THE PICTURE
          borrower_pictured=="true",   
          # The repayment interval is irregular
-         repayment_interval=="monthly", 
+         repayment_interval=="monthly",
          # The distribution model is through field partner
          #distribution_model=="field_partner",
          # The sector Name is either Agriculture, Food or Retail
-         sector_name%in%c("Agriculture","Food","Retail")) 
+         sector_name%in%params$sector_name[[1]]) 
 
 data.table::fwrite(df, glue::glue('data/processed/loans_subset_{experiment_id}.csv'))
 
 print('***************************************************')
 print(glue::glue('*** Created  data/processed/loans_subset_{experiment_id}.csv ******'))
+print(glue::glue('*** Number of rows is {nrow(df)} ******'))
 print('***************************************************')
 

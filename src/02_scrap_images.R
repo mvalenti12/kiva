@@ -12,7 +12,6 @@ if (length(args)==0) {
 }
 
 params_file <- jsonlite::fromJSON('Config/experiments.json')
-experiment_id <- 'Philippines_Sep19'
 params <- params_file[[experiment_id]]
 
 IMG_DIR <- glue::glue('img/{experiment_id}')
@@ -73,4 +72,6 @@ for (i in 1:10){
   start_loop()
   Sys.sleep(60)
 }
+beepr::beep(3)
+
 

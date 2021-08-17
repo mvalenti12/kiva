@@ -4,15 +4,32 @@ source('src/00_libraries_functions.R')
 ###########################################################
 ################  Data importing    #######################
 ###########################################################
+args = commandArgs(trailingOnly=TRUE)
+
+
+# test if there is at least one argument: if not, return an error
+if (length(args)==0) {
+  experiment_id = 'Colombia_Sep19'
+  #stop("At least one argument must be supplied (input file).n", call.=FALSE)
+} else if (length(args)==1) {
+  # default output file
+  experiment_id = args[1]
+}
+
+params_file <- jsonlite::fromJSON('Config/experiments.json')
+params <- params_file[[experiment_id]]
+
+IMG_DIR <- glue::glue('img/{experiment_id}')
 
 DATA_DIR <- 'data/processed'
-date_subset = '2019-09-19'
-country_subset = "Philippines"
-IMG_DIR <- glue::glue('img/{date_subset}_{country_subset}/')
-list.dirs('img')
 
 
-df <- data.table::fread(glue::glue('{DATA_DIR}/loans_subset_enriched_{date_subset}_{country_subset}.csv'))
+df <- data.table::fread(glue::glue('{DATA_DIR}/loans_subset_enriched_{experiment_id}.csv'))
+df <- df %>%
+  filter(partner_id == params$partner_id)
+
+df <- df[df$G_confidence >= quantile(df$G_confidence, 0.3),]
+df <- df[df$A_confidence >= quantile(df$A_confidence, 0.3),]
 
 df$D_tags_N <- stringr::str_extract_all(df$tags, '\\#') %>% sapply(length)
 df$D_tags_N <- df$D_tags_N>0
@@ -24,7 +41,8 @@ df <- df %>%
   # filter(status == 'funded',
   #        partner_id == 145) %>%
   as.data.frame() %>%
-  select(-G_anger, -G_surprise, -A_calm, -A_fear, -A_confused, -A_disgusted, -A_surprised, -A_angry) 
+  select(-G_anger, -G_surprise, -G_blurred, -A_calm, -A_fear, -A_confused, -A_disgusted, -A_surprised, -A_angry, -G_confidence, -A_confidence) 
+
 
 df$D_is_married <- df$description_translated %>% str_detect(pattern = 'married')
 df$D_is_widow <- df$description_translated %>% str_detect(pattern = 'widow')
@@ -82,6 +100,8 @@ df$D_age_bin[between(df$D_age,50,64)] <- '50-64'
 df$D_age_bin[between(df$D_age,65,999)] <- '65+'
 df$D_age <- NULL
 
+df$day_of_week <- weekdays(as.Date(df$posted_time))
+
 
 colSums(is.na(df))
 df <- df[rowSums(is.na(df))==0,]
@@ -93,8 +113,6 @@ df_emotions <- df_emotions[names(df_emotions) %in% emotions_var]
 df_emotions_scaled <- scale(df_emotions,
                             center = TRUE,
                             scale = TRUE)
-
-
 
 prcomp_res <- prcomp(df_emotions,
                      scale = TRUE)
@@ -175,6 +193,9 @@ first_factor <- res.MFA$loadings[,1] %*% t(df_emotions_scaled) %>% as.vector()
 #first_factor <- df$G_joy + df$M_happiness + df$A_happy
 second_factor <- res.MFA$loadings[,2] %*% t(df_emotions_scaled) %>% as.vector()
 
+df_emotions_scaled_df <- df_emotions_scaled %>% as.data.frame()
+first_factor_manual <- df_emotions_scaled_df$G_joy + df_emotions_scaled_df$M_happiness + df_emotions_scaled_df$A_happy 
+second_factor_manual <- df_emotions_scaled_df$G_sorrow + df_emotions_scaled_df$M_sadness + df_emotions_scaled_df$A_sad 
 
 
 generate_mosaic <- function(loan_ids, output_file){
@@ -201,6 +222,13 @@ df_final <- df %>%
   filter(status == 'funded') %>%
   select(-status)
 
+df_final %>%
+  ggplot(aes(x = as.Date(posted_time),
+             group = as.Date(posted_time),
+             col = as.factor(day_of_week),
+             y = log(time_to_fund))) + 
+  geom_boxplot()
+
 ggplot(df_final,
        aes(x = time_to_fund)) + 
   labs(title = 'Time to fund (days)',
@@ -213,17 +241,20 @@ ggplot(df_final,
   geom_smooth(method = "lm") 
 
 res_lm <- lm(log(time_to_fund) ~ 
-               log(loan_amount) + 
-               first_factor + second_factor +
-               sector_name + 
-               #D_age_bin + 
-               D_children + 
-               D_is_married +
-               D_is_widow + 
-               D_is_single + 
-               D_years_exp + 
-               D_tags_N + D_tags_UF,
-             data = df_final)
+               + log(loan_amount) 
+               + first_factor 
+               + second_factor 
+               + sector_name 
+               + day_of_week 
+               # D_age_bin + 
+               # D_children + 
+               + D_is_married
+               + D_is_widow 
+               + D_is_single 
+               # + D_years_exp 
+               + D_tags_N 
+               + D_tags_UF
+             ,data = df_final)
 res_lm$aic <- AIC(res_lm)
 res_lm$bic <- BIC(res_lm)
 summary(res_lm)

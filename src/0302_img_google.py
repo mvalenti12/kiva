@@ -87,10 +87,12 @@ def get_emotions_google(path):
     Returns:
         res: Dictionary with fields loan_id, anger, contempt, disgust, fear, happiness, neutral, sadness, surprise.
     """
-    
+    if os.path.getsize(path) == 0:
+      return None
     # Loads the image into memory
     with io.open(path, 'rb') as image_file:
         content = image_file.read()
+    
 
     image = vision.Image(content=content)
 
@@ -127,12 +129,14 @@ def get_emotions_google(path):
     
 # Creates list for storing results
 res = []
+
 for file_name in tqdm.tqdm(file_names):
   loan_id = os.path.split(file_name)[1].replace('.jpg','')
   
   if (str(loan_id) in processed_ids):
     print('Loan ID {} already processed'.format(str(loan_id)))
-  else: 
+  else : 
+    print('Processing Loan ID {}'.format(str(loan_id)))
     out = get_emotions_google(file_name)
     print('Loan ID {} processed correctly'.format(str(loan_id)))
     if out is not None:

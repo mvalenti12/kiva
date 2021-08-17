@@ -4,11 +4,23 @@ source('src/00_libraries_functions.R')
 ###########################################################
 ################  Data importing    #######################
 ###########################################################
+args = commandArgs(trailingOnly=TRUE)
 
+
+# test if there is at least one argument: if not, return an error
+if (length(args)==0) {
+  experiment_id = 'Colombia_Sep19'
+  # stop("At least one argument must be supplied (input file).n", call.=FALSE)
+} else if (length(args)==1) {
+  # default output file
+  experiment_id = args[1]
+}
+
+params_file <- jsonlite::fromJSON('Config/experiments.json')
+params <- params_file[[experiment_id]]
+
+IMG_DIR <- glue::glue('img/{experiment_id}')
 DATA_DIR <- 'data/processed'
-
-date_subset = '2019-09-19'
-country_subset = "Philippines"
 
 import_data <- function(source){
   if (!source %in% c('aws','google','msft')){
@@ -88,15 +100,18 @@ df_msft <- import_data('msft')
 df_aws <- import_data('aws')
 
 
-df <- data.table::fread(glue::glue('{DATA_DIR}/loans_subset_{date_subset}_{country_subset}.csv')) %>%
+df <- data.table::fread(glue::glue('{DATA_DIR}/loans_subset_{experiment_id}.csv')) %>%
   mutate(loan_id = as.factor(loan_id)) %>%
-  select(loan_id, partner_id, funded_amount, loan_amount, status, num_lenders_total, activity_name, sector_name, posted_time, raised_time, tags, description_translated)
+  select(loan_id, partner_id, funded_amount, loan_amount, status, num_lenders_total, activity_name, sector_name, posted_time, raised_time, tags, description_translated, posted_time)
 df$time_to_fund <- as.numeric(as.POSIXct(df$raised_time)-as.POSIXct(df$posted_time))
 
 df <- df %>%
   left_join(df_google, by = 'loan_id') %>%
   left_join(df_msft, by = 'loan_id') %>%
-  left_join(df_aws, by = 'loan_id')
+  left_join(df_aws, by = 'loan_id') %>%
+  filter(!is.na(G_joy),
+         !is.na(M_anger),
+         !is.na(A_happy))
 
-data.table::fwrite(df, file = glue::glue('{DATA_DIR}/loans_subset_enriched_{date_subset}_{country_subset}.csv'))
+data.table::fwrite(df, file = glue::glue('{DATA_DIR}/loans_subset_enriched_{experiment_id}.csv'))
 

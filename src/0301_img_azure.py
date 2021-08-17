@@ -102,6 +102,8 @@ def get_emotions_msft(path):
   
   """
   time.sleep(3) # it is limited to 20 calls/minute
+  if os.path.getsize(path) == 0:
+      return None
   # BufferedReader
   image = open(path, 'rb') 
 
