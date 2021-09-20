@@ -64,7 +64,7 @@ df <- loans %>%
          # The distribution model is through field partner
          #distribution_model=="field_partner",
          # The sector Name is either Agriculture, Food or Retail
-         sector_name%in%c("Agriculture","Food","Retail")) 
+         sector_name %in% params$sector_name) 
 
 data.table::fwrite(df, glue::glue('data/processed/loans_subset_{experiment_id}.csv'))
 
