@@ -1,5 +1,5 @@
 source('src/00_libraries_functions.R')
-
+print('Running src/01_data_importing.R')
 ###########################################################
 ################  Data downloading  #######################
 ###########################################################
@@ -27,16 +27,7 @@ if (!file.exists('data/raw/kiva_ds_csv.zip')){
 ###########################################################
 params_file <- jsonlite::fromJSON('Config/experiments.json')
 
-loans <- fread('data/raw/loans.csv')
-colnames(loans) <- unlist(lapply(names(loans), function(x) str_to_lower(x)))
-loans$funded <- loans$funded_amount==loans$loan_amount
-loans$time_to_fund <- as.numeric(as.POSIXct(loans$raised_time)-as.POSIXct(loans$posted_time))
-
 args = commandArgs(trailingOnly=TRUE)
-
-
-
-loans$country_name[(to_date(loans$posted_time) >= '2019-09-01') & (to_date(loans$posted_time) <= '2019-10-01')] %>% table() %>% sort(decreasing = TRUE)
 
 # test if there is at least one argument: if not, return an error
 if (length(args)==0) {
@@ -45,31 +36,67 @@ if (length(args)==0) {
   # default output file
   experiment_id = args[1]
   if (!experiment_id %in% names(params_file)){
-    stop("A valid experiment id must be provided", call.=FALSE)
+    valid_names <- paste0(names(params_file), collapse = '\n\t')
+    stop(glue::glue("A valid experiment id must be provided. \nPlease provide any of: \n\t{valid_names}"), call.=FALSE)
   }
 }
 
+print('Loading loans data')
+loans <- fread('data/raw/loans.csv')
+print(glue::glue('Loans data has been loaded. Number of rows = {nrow(loans)}'))
+colnames(loans) <- unlist(lapply(names(loans), function(x) str_to_lower(x)))
+loans$funded <- loans$funded_amount==loans$loan_amount
+loans$time_to_fund <- as.numeric(as.POSIXct(loans$raised_time)-as.POSIXct(loans$posted_time))
+
 params <- params_file[[experiment_id]]
 
-df <- loans %>%
-  # Country is Philippines
-  filter(country_name==params$country
-         #, partner_id==145
-         # Partner Id is 145
-         ) %>%         
-  # Posted Date is after 2016-03-01
-  filter(to_date(posted_time) >= params$date_start,
-         to_date(posted_time) <= params$date_end,
-         partner_id == params$partner_id) %>%
+df <- loans
+if (!is.na(params$country)){
+  shape_0 <- nrow(df)
+  df <- df %>%
+    filter(country_name==params$country
+           #, partner_id==145
+           # Partner Id is 145
+    ) 
+  shape_1 <- nrow(df)
+  print(glue::glue('Number of rows before/after filtering for country: {shape_0} -> {shape_1}'))
+}
+
+if (!is.na(params$date_start)){
+  shape_0 <- nrow(df)
+  df <- df %>%
+    filter(to_date(posted_time) >= params$date_start,
+           to_date(posted_time) <= params$date_end)
+  shape_1 <- nrow(df)
+  print(glue::glue('Number of rows before/after filtering for time period: {shape_0} -> {shape_1}'))
+}
+
+if (!is.na(params$partner_id)){
+  shape_0 <- nrow(df)
+  df <- df %>%
+    filter(partner_id == params$partner_id)
+  shape_1 <- nrow(df)
+  print(glue::glue('Number of rows before/after filtering for partner_ID: {shape_0} -> {shape_1}'))
+}
+
+if (!is.na(params$sector_name)){
+  shape_0 <- nrow(df)
+  df <- df %>%
+    filter(sector_name%in%params$sector_name[[1]])
+  shape_1 <- nrow(df)
+  print(glue::glue('Number of rows before/after filtering for sector name: {shape_0} -> {shape_1}'))
+}
+
+shape_0 <- nrow(df)
+df <- df %>%
   filter(borrower_genders=="female",  
          # There is only ONE borrower IN THE PICTURE
          borrower_pictured=="true",   
          # The repayment interval is irregular
-         repayment_interval=="monthly",
-         # The distribution model is through field partner
-         #distribution_model=="field_partner",
-         # The sector Name is either Agriculture, Food or Retail
-         sector_name%in%params$sector_name[[1]]) 
+         repayment_interval=="monthly") 
+shape_1 <- nrow(df)
+print(glue::glue('Number of rows before/after filtering for single female borrower: {shape_0} -> {shape_1}'))
+
 
 data.table::fwrite(df, glue::glue('data/processed/loans_subset_{experiment_id}.csv'))
 

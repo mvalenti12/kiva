@@ -5,18 +5,22 @@ source('src/00_libraries_functions.R')
 ################  Data importing    #######################
 ###########################################################
 args = commandArgs(trailingOnly=TRUE)
-
+params_file <- jsonlite::fromJSON('Config/experiments.json')
 
 # test if there is at least one argument: if not, return an error
 if (length(args)==0) {
-  experiment_id = 'Colombia_Sep19'
+  experiment_id = 'Tajikistan_Sep19'
   # stop("At least one argument must be supplied (input file).n", call.=FALSE)
 } else if (length(args)==1) {
   # default output file
   experiment_id = args[1]
+  if (!experiment_id %in% names(params_file)){
+    valid_names <- paste0(names(params_file), collapse = '\n\t')
+    stop(glue::glue("A valid experiment id must be provided. \nPlease provide any of: \n\t{valid_names}"), call.=FALSE)
+  }
 }
 
-params_file <- jsonlite::fromJSON('Config/experiments.json')
+
 params <- params_file[[experiment_id]]
 
 IMG_DIR <- glue::glue('img/{experiment_id}')

@@ -1,7 +1,9 @@
 rm(list = ls())
 source('src/00_libraries_functions.R')
-args = commandArgs(trailingOnly=TRUE)
+print('Running src/02_scrap_images.R')
 
+args = commandArgs(trailingOnly=TRUE)
+params_file <- jsonlite::fromJSON('Config/experiments.json')
 
 # test if there is at least one argument: if not, return an error
 if (length(args)==0) {
@@ -9,9 +11,13 @@ if (length(args)==0) {
 } else if (length(args)==1) {
   # default output file
   experiment_id = args[1]
+  if (!experiment_id %in% names(params_file)){
+    valid_names <- paste0(names(params_file), collapse = '\n\t')
+    stop(glue::glue("A valid experiment id must be provided. \nPlease provide any of: \n\t{valid_names}"), call.=FALSE)
+  }
 }
 
-params_file <- jsonlite::fromJSON('Config/experiments.json')
+
 params <- params_file[[experiment_id]]
 
 IMG_DIR <- glue::glue('img/{experiment_id}')
@@ -68,6 +74,7 @@ start_loop <- function(){
 }
 
 for (i in 1:10){
+  # In case the loop breaks, it will sleep for 60 seconds
   print(i)
   start_loop()
   Sys.sleep(60)

@@ -28,6 +28,8 @@
     "Tajikistan_Sep19" : [{
       "date_start": "2019-09-01",
       "date_end": "2019-09-30",
-      "country": "Tajikistan"
+      "country": "Tajikistan",
+      "partner_id": null,
+      "sector_name": null
       }]
 }

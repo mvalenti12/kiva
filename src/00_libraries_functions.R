@@ -1,21 +1,22 @@
-#required libraries
-#data importing
-library(jsonlite) 
-library(readr) 
-library(data.table)
-#data manipulation
-library(dplyr) 
-library(tibble) #rownames_to_column
-library(lubridate)
-library(stringr)
-library(reshape2)
-library(glue)
-#web scrapping
-library(rvest)
-library(tidyverse)
-library(httr)
+if (!require('pacman')) install.packages('pacman')
 
-library(progress)
+renv::restore()
+
+pacman::p_load(renv,
+               jsonlite, 
+               readr,
+               data.table, 
+               tidyverse,
+               dplyr, 
+               tibble,
+               lubridate,
+               stringr,
+               reshape2,
+               glue,
+               rvest,
+               httr,
+               progress,
+               ggplot2)
 
 
 options(scipen = 999)

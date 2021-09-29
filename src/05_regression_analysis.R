@@ -5,18 +5,22 @@ source('src/00_libraries_functions.R')
 ################  Data importing    #######################
 ###########################################################
 args = commandArgs(trailingOnly=TRUE)
-
+params_file <- jsonlite::fromJSON('Config/experiments.json')
 
 # test if there is at least one argument: if not, return an error
 if (length(args)==0) {
-  experiment_id = 'Colombia_Sep19'
+  experiment_id = 'Tajikistan_Sep19'
   #stop("At least one argument must be supplied (input file).n", call.=FALSE)
 } else if (length(args)==1) {
   # default output file
   experiment_id = args[1]
+  if (!experiment_id %in% names(params_file)){
+    valid_names <- paste0(names(params_file), collapse = '\n\t')
+    stop(glue::glue("A valid experiment id must be provided. \nPlease provide any of: \n\t{valid_names}"), call.=FALSE)
+  }
 }
 
-params_file <- jsonlite::fromJSON('Config/experiments.json')
+
 params <- params_file[[experiment_id]]
 
 IMG_DIR <- glue::glue('img/{experiment_id}')
@@ -128,10 +132,8 @@ res.MFA <- FactoMineR::MFA(base = df_emotions_scaled,
                            num.group.sup = NULL,
                            graph = FALSE)
 
-
-
 res.MFA <- stats::factanal(x = df_emotions_scaled,
-                           factors = 2,
+                           factors = 3,
                            rotation = "varimax",
                            lower = 0.8) 
 loadings <- res.MFA$loadings %>%
@@ -194,18 +196,43 @@ first_factor <- res.MFA$loadings[,1] %*% t(df_emotions_scaled) %>% as.vector()
 second_factor <- res.MFA$loadings[,2] %*% t(df_emotions_scaled) %>% as.vector()
 
 df_emotions_scaled_df <- df_emotions_scaled %>% as.data.frame()
-first_factor_manual <- df_emotions_scaled_df$G_joy + df_emotions_scaled_df$M_happiness + df_emotions_scaled_df$A_happy 
-second_factor_manual <- df_emotions_scaled_df$G_sorrow + df_emotions_scaled_df$M_sadness + df_emotions_scaled_df$A_sad 
+df_emotions_scaled_df$loan_id <- df$loan_id
+df_emotions_scaled_df$first_factor_manual <- df_emotions_scaled_df$G_joy + df_emotions_scaled_df$M_happiness + df_emotions_scaled_df$A_happy 
+df_emotions_scaled_df$second_factor_manual <- df_emotions_scaled_df$G_sorrow + df_emotions_scaled_df$M_sadness + df_emotions_scaled_df$A_sad 
+df_emotions_scaled_df$first_factor <- first_factor
+df_emotions_scaled_df$second_factor <- second_factor
 
+ecdf_plot <- function(data) {
+  
+  ecdf <- data[, colSums(is.na(data)) != nrow(data)] %>%
+    pivot_longer(everything()) %>%
+    group_by(name) %>%
+    arrange(value, by_group = TRUE) %>%
+    mutate(ecdf = seq(1/n(), 1 - 1/n(), length.out = n())) 
+  ecdf <- ecdf %>%
+    mutate(label = case_when(str_detect(name, 'A_') ~ 'Amazon',
+                             str_detect(name, 'M_') ~ 'Microsoft',
+                             str_detect(name, 'G_') ~ 'Google',
+                             TRUE ~ 'Manual'))
+  ggplot(ecdf,
+         aes(x = value, y = ecdf, colour = name)) +
+    geom_step() +
+    theme_bw() + 
+    facet_grid(~label, scales = 'free') + 
+    ggsave(glue::glue("{IMG_DIR}/ecdf.jpeg"))
+}
+data.table::fwrite(df_emotions_scaled_df, glue::glue('{DATA_DIR}/loans_emotions_scaled_{experiment_id}.csv'))
 
 generate_mosaic <- function(loan_ids, output_file){
-  img_files <- paste0(IMG_DIR, loan_ids, '.jpg') %>% sample(16)
+  img_files <- paste0(IMG_DIR, '/',loan_ids, '_annotated.jpg') %>% sample(9)
   magick::image_read(img_files) %>%
-    magick::image_montage(tile = '4x4', geometry = '0x100+0+0', shadow = FALSE) %>%
+    magick::image_montage(tile = '3x3', geometry = '0x1000+0+0', shadow = FALSE) %>%
     magick::image_write(
-      format = "jpg", path = paste0(IMG_DIR, output_file),
-      quality = 100
+      format = "jpg", 
+      path = paste0(IMG_DIR, '/',output_file),
+      quality = 1000
     )
+  print(glue::glue('{IMG_DIR}/{output_file} has been generated'))
 }
 
 generate_mosaic(df$loan_id[which(first_factor >= sort(first_factor, decreasing = TRUE)[16])],
@@ -213,8 +240,6 @@ generate_mosaic(df$loan_id[which(first_factor >= sort(first_factor, decreasing =
 generate_mosaic(df$loan_id[which(first_factor <= sort(first_factor, decreasing = FALSE)[16])],
                 'first_factor_bottom.jpg')
 
-
-hist(df$loan_amount)
 
 df_final <- df %>%
   mutate(first_factor = first_factor,
@@ -234,11 +259,14 @@ ggplot(df_final,
   labs(title = 'Time to fund (days)',
        x = 'Days') +
   geom_density()
+
 ggplot(df_final,
        aes(x = log(time_to_fund),
            y = log(loan_amount))) + 
   geom_point() + 
   geom_smooth(method = "lm") 
+
+df_final
 
 res_lm <- lm(log(time_to_fund) ~ 
                + log(loan_amount) 
