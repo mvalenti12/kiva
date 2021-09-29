@@ -2,11 +2,32 @@
   "Philippines_Sep19": [{
       "date_start": "2019-09-01",
       "date_end": "2019-09-30",
-      "country": "Philippines"
+      "country": "Philippines",
+      "partner_id": "145",
+      "sector_name": ["Agriculture","Food","Retail"]
     }],
-  "Peru_Jan19" : [{
-      "date_start": "2019-09-19",
-      "date_end": "2019-09-20",
+  "Philippines_Aug19": [{
+      "date_start": "2019-09-01",
+      "date_end": "2019-09-30",
+      "country": "Philippines",
+      "partner_id": "145",
+      "sector_name": ["Agriculture","Food","Retail"]
+    }],
+  "Philippines_OctNov19": [{
+      "date_start": "2019-10-01",
+      "date_end": "2019-11-30",
       "country": "Philippines"
-    }]
+  }],
+  "Colombia_Sep19" : [{
+    "date_start": "2019-08-01",
+    "date_end": "2019-11-30",
+    "country": "Colombia",
+    "partner_id": "177",
+    "sector_name": ["Agriculture","Food","Retail", "Services"]
+    }],
+    "Tajikistan_Sep19" : [{
+      "date_start": "2019-09-01",
+      "date_end": "2019-09-30",
+      "country": "Tajikistan"
+      }]
 }
