@@ -1,5 +1,6 @@
 rm(list = ls())
 source('src/00_libraries_functions.R')
+print('Running src/04_dataset_preparation.R')
 
 ###########################################################
 ################  Data importing    #######################
@@ -117,5 +118,10 @@ df <- df %>%
          !is.na(M_anger),
          !is.na(A_happy))
 
-data.table::fwrite(df, file = glue::glue('{DATA_DIR}/loans_subset_enriched_{experiment_id}.csv'))
-
+outfile <- glue::glue('{DATA_DIR}/loans_subset_enriched_{experiment_id}.csv')
+  
+data.table::fwrite(df, file = outfile)
+if (file.exists(outfile)){
+  print(glue::glue('{outfile} has been generated'))
+}
+print('Successfully ran src/04_dataset_preparation.R')

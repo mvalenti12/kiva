@@ -70,14 +70,16 @@ start_loop <- function(){
       Sys.sleep(5)
     }
   }
-  close(pb)
+  break
 }
 
-for (i in 1:10){
-  # In case the loop breaks, it will sleep for 60 seconds
-  print(i)
-  start_loop()
-  Sys.sleep(60)
+if (total > 0){
+  for (i in 1:10){
+    # In case the loop breaks, it will sleep for 60 seconds
+    print(i)
+    start_loop()
+    Sys.sleep(60)
+  }
 }
 beepr::beep(3)
 

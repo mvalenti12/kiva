@@ -9,7 +9,7 @@ params_file <- jsonlite::fromJSON('Config/experiments.json')
 
 # test if there is at least one argument: if not, return an error
 if (length(args)==0) {
-  experiment_id = 'Tajikistan_Sep19'
+  experiment_id = 'Philippines_Sep19'
   #stop("At least one argument must be supplied (input file).n", call.=FALSE)
 } else if (length(args)==1) {
   # default output file
@@ -29,8 +29,6 @@ DATA_DIR <- 'data/processed'
 
 
 df <- data.table::fread(glue::glue('{DATA_DIR}/loans_subset_enriched_{experiment_id}.csv'))
-df <- df %>%
-  filter(partner_id == params$partner_id)
 
 df <- df[df$G_confidence >= quantile(df$G_confidence, 0.3),]
 df <- df[df$A_confidence >= quantile(df$A_confidence, 0.3),]
@@ -272,13 +270,13 @@ res_lm <- lm(log(time_to_fund) ~
                + log(loan_amount) 
                + first_factor 
                + second_factor 
-               + sector_name 
+               # + sector_name 
                + day_of_week 
                # D_age_bin + 
                # D_children + 
-               + D_is_married
-               + D_is_widow 
-               + D_is_single 
+               # + D_is_married
+               # + D_is_widow 
+               # + D_is_single 
                # + D_years_exp 
                + D_tags_N 
                + D_tags_UF
@@ -288,4 +286,20 @@ res_lm$bic <- BIC(res_lm)
 summary(res_lm)
 plot(res_lm)
 
+res_lm
+
+writeLines(capture.output(stargazer::stargazer(res_lm,
+                                    add.lines = list(c("AIC",
+                                                       round(AIC(res_lm),1)),
+                                                     c("BIC",
+                                                       round(BIC(res_lm),1))))),
+           glue::glue("output/lm_{experiment_id}.tex"))
+
+writeLines(capture.output(stargazer::stargazer(res_lm,
+                                               type="html", out="test.html",
+                                               add.lines = list(c("AIC",
+                                                                  round(AIC(res_lm),1)),
+                                                                c("BIC",
+                                                                  round(BIC(res_lm),1))))),
+           glue::glue("output/lm_{experiment_id}.html"))
 
